@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+*.pot
+*.mo
+*.coverage
+*.tox/
+*.env
+.env
+venv/
+.venv/
+ENV/
+env/
+.mkhuda_faiss_index/*
+docs.json
