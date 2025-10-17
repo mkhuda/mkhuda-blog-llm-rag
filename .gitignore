@@ -21,5 +21,8 @@ venv/
 .venv/
 ENV/
 env/
-.mkhuda_faiss_index/*
+mkhuda_faiss_index/
+mkhuda_faiss_backup.json
+mkhuda_chroma_backup.json
+docs_chroma.json
 docs.json

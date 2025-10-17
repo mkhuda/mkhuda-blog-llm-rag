@@ -1,0 +1,30 @@
+# === Core LangChain stack (modern & stable) ===
+langchain==0.3.3
+langchain-core==0.3.15
+langchain-community==0.3.2
+langchain-openai==0.2.2
+
+# === Vector DB: Chroma ===
+chromadb==0.5.5
+
+# === OpenAI Embeddings / Chat ===
+openai>=1.40.0
+
+# === Data handling ===
+pandas>=2.2.2
+tqdm>=4.66.5
+beautifulsoup4>=4.12.3
+mysql-connector-python>=9.0.0
+
+# === Utilities ===
+python-dotenv>=1.0.1
+requests>=2.32.3
+
+# === Optional but recommended (for performance) ===
+fastapi>=0.111.0
+uvicorn>=0.30.0
+pydantic>=2.11.0
+
+# === For local testing / dev convenience ===
+# ipython>=8.26.0
+# jupyterlab>=4.2.5

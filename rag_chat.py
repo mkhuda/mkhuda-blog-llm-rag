@@ -15,7 +15,7 @@ if not api_key:
     raise ValueError("❌ OPENAI_API_KEY tidak ditemukan di .env")
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small", api_key=api_key)
-llm = ChatOpenAI(model="gpt-4o", temperature=0.7, api_key=api_key)
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7, api_key=api_key)
 
 # 2) Load FAISS
 INDEX_PATH = "mkhuda_faiss_index"
@@ -27,16 +27,6 @@ vectorstore = FAISS.load_local(
 retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 4})
 
 # 3) Prompt: WAJIB punya {context} + {question}
-# system_prompt = """
-# Kamu asisten situs mkhuda.com. Jawab singkat, jelas, HTML-safe.
-# - Gunakan konteks {context} (potongan artikel mkhuda.com).
-# - Jika relevan, sertakan tautan ke artikel sumber berdasarkan metadata yang tersedia. formatnya:
-#   <a href="{{url}}" target="_blank">Baca selengkapnya di sini</a>
-# - Kamu bisa tautkan beberapa url artikel dengan format title dan link di atas, contoh formatnya:
-#  <a href="{{url}}" target="_blank">{{title}}</a>. dengan model list untuk setiap artikel.
-# - Jawab dalam bahasa Indonesia dengan gaya santai tapi tidak terlalu formal.
-# - Jangan tautkan situs lain. Jika info tidak ada di konteks, katakan belum tersedia di mkhuda.com.
-# """
 
 system_prompt = """
 Kamu adalah asisten situs web mkhuda.com.
@@ -52,8 +42,6 @@ Gunakan URL dan judul yang tertera di konteks untuk membuat tautan HTML dengan f
 Jika ada beberapa artikel relevan, tampilkan semuanya dalam daftar tautan.
 Gunakan bahasa Indonesia yang santai tapi sopan.
 """
-# Catatan: model akan melihat potongan teks + metadata di {context}. 
-# Ia bisa mengekstrak URL dari metadata saat merespon.
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", system_prompt),
