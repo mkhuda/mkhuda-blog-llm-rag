@@ -15,11 +15,26 @@ import pandas as pd
 import mysql.connector
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+import faiss
+
+# --- Compatibility patch untuk FAISS >= 1.11 ---
+if not hasattr(faiss, "IndexFlatL2"):
+    try:
+        # Untuk FAISS 1.11–1.12
+        import faiss.class_wrappers as class_wrappers
+        faiss.IndexFlatL2 = class_wrappers.IndexFlatL2
+        faiss.IndexIDMap = class_wrappers.IndexIDMap
+    except (ImportError, AttributeError):
+        # Fallback untuk build tertentu
+        import faiss.swigfaiss as swigfaiss
+        faiss.IndexFlatL2 = swigfaiss.IndexFlatL2
+        faiss.IndexIDMap = swigfaiss.IndexIDMap
 
 # LangChain modern imports (2025)
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
+from langchain_community.docstore import InMemoryDocstore
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # --- 1️⃣ Ambil variabel environment ---
@@ -44,7 +59,16 @@ if os.path.exists(index_path):
     print(f"✅ Index lama dimuat ({len(indexed_urls)} dokumen sudah di-index).")
 else:
     print("🆕 Tidak ada index lama, membuat index baru...")
-    vectorstore = FAISS.from_texts([], embedding=embeddings)
+    # Buat index FAISS manual dengan dimensi sesuai model embedding
+    dim = 1536  # untuk model text-embedding-3-small
+    index = faiss.IndexFlatL2(dim)
+    docstore = InMemoryDocstore({})  # ✅ docstore yang bisa di-append
+    vectorstore = FAISS(
+        embedding_function=embeddings,
+        index=index,
+        docstore=docstore,
+        index_to_docstore_id={}
+    )
     indexed_urls = set()
 
 # --- 2️⃣ Koneksi ke database WordPress ---

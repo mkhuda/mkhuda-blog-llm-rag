@@ -31,10 +31,10 @@ def pre_reasoning(user_query: str) -> dict:
 
     system_prompt = """
     Kamu adalah asisten untuk situs mkhuda.com.
-    Tugasmu: pahami maksud pertanyaan user dan tentukan apakah perlu pencarian artikel (RAG) atau tidak.
+    Tugasmu: pahami maksud pertanyaan user dan tentukan apakah perlu pencarian artikel (RAG) atau tidak. bisa jadi user menggunakan bahasa gaul atau formal.
 
     Panduan:
-    - Jawab "rag_search" jika pertanyaan berkaitan dengan teknologi, AI, pemrograman, web development,
+    - Jawab "rag_search" jika pertanyaan berkaitan dengan teknologi, veo, AI, pemrograman, web development,
       atau hal-hal yang kemungkinan dibahas di mkhuda.com.
     - Jawab "out_of_scope" jika pertanyaannya tidak relevan (mis. cuaca, puisi, gosip, motivasi, dll).
 

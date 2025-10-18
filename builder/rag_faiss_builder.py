@@ -21,9 +21,10 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
-INDEX_DIR = Path("mkhuda_faiss_index")
-DOCS_JSON = Path("docs.json")                   # full korpus
-BACKUP_JSON = Path("mkhuda_faiss_backup.json")  # dump dari FAISS terakhir
+BASE_DIR = Path(__file__).resolve().parent.parent
+INDEX_DIR = BASE_DIR / "mkhuda_faiss_index"
+DOCS_JSON = BASE_DIR / "docs.json"                   # full korpus
+BACKUP_JSON = BASE_DIR / "mkhuda_faiss_backup.json"  # dump dari FAISS terakhir
 
 # --- ENV ---
 api_key = os.getenv("OPENAI_API_KEY")
