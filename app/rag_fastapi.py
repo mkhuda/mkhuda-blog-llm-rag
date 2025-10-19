@@ -1,97 +1,121 @@
 """
 RAG FastAPI mkhuda.com
 ----------------------
-Backend ringan untuk asisten mkhuda.com berbasis FAISS lokal dan OpenAI API.
-Diuji untuk berjalan di VPS 1 GB (Python 3.12 + FastAPI + Uvicorn).
-
-Endpoint utama:
-POST /ask  →  { "message": "artikel tentang HTMX" }
+- Self-healing: builds FAISS index on first run if missing.
+- Auto-updating: schedules a background job to rebuild the index every 2 days.
 """
+import os
+import sys
+import re
+import threading
+import datetime
+from pathlib import Path
+import subprocess
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.docstore.document import Document
-from rag_pre_reasoning import pre_reasoning
 
-from datetime import datetime
-import os
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
-# ---------- SETUP ENV ----------
+from utils.rag_pre_reasoning import pre_reasoning
+from utils.rag_prompts import mkhuda_system_prompt
+
+# ---------- SETUP & PATHS ----------
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     raise ValueError("❌ OPENAI_API_KEY tidak ditemukan di .env")
 
-# ---------- INIT FASTAPI ----------
-app = FastAPI(title="mkhuda.com RAG API", version="1.0")
+INDEX_PATH = BASE_DIR / "mkhuda_faiss_index"
+BUILDER_PATH = BASE_DIR / "builder" / "rag_faiss_builder.py"
+scheduler = BackgroundScheduler()
 
-# Aktifkan CORS agar bisa diakses dari web / localhost / domain mkhuda.com
+# ---------- FAISS INDEX & SCHEDULER LOGIC ----------
+def build_faiss_index():
+    """Builds or rebuilds the FAISS index by running the builder script."""
+    print(f"[{datetime.datetime.now()}] 🔄 Starting FAISS index build...")
+    try:
+        # Use sys.executable to ensure we're using the python from the correct venv
+        subprocess.run([sys.executable, str(BUILDER_PATH)], check=True, capture_output=True, text=True)
+        print("✅ FAISS index built successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to build FAISS index. Error: {e.stderr}")
+    except Exception as e:
+        print(f"❌ An unexpected error occurred during FAISS build: {e}")
+
+def ensure_faiss_index():
+    """Ensures FAISS index is available, building it automatically if not."""
+    if not INDEX_PATH.exists() or not any(INDEX_PATH.iterdir()):
+        print("⚙️ FAISS index not found — building automatically (this may take a moment)...")
+        build_faiss_index() # This is a blocking call for the very first startup
+    else:
+        print("🧠 FAISS index found — ready to use.")
+
+def scheduled_rebuild_job():
+    """Wrapper function for the scheduler to run the build process."""
+    print("🗓️ Kicked off by scheduler: Rebuilding FAISS index in the background.")
+    # Run the build in a separate thread to avoid blocking the main app
+    threading.Thread(target=build_faiss_index, daemon=True).start()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handles startup and shutdown events for the FastAPI app."""
+    print("🚀 FastAPI starting up...")
+    # 1. On startup, ensure the index exists (blocking).
+    ensure_faiss_index()
+
+    # 2. Add the recurring job to the scheduler. It will run every 2 days.
+    scheduler.add_job(scheduled_rebuild_job, "interval", days=2, id="faiss_rebuild_job")
+    
+    # 3. Start the background scheduler.
+    scheduler.start()
+    print(f"✅ Scheduler started. Next FAISS rebuild is scheduled in 2 days.")
+    
+    try:
+        yield
+    finally:
+        # 4. On shutdown, cleanly stop the scheduler.
+        print("🛑 Shutting down scheduler...")
+        scheduler.shutdown()
+
+# ---------- INIT FASTAPI ----------
+app = FastAPI(
+    title="mkhuda.com RAG API",
+    version="1.1",
+    lifespan=lifespan # Use the new lifespan manager
+)
+
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # bisa diganti dengan ["https://mkhuda.com"]
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ---------- MODEL & RETRIEVER ----------
+# This part remains the same
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small", api_key=api_key)
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7, api_key=api_key)
 
-INDEX_PATH = "mkhuda_faiss_index"
-vectorstore = FAISS.load_local(INDEX_PATH, embeddings, allow_dangerous_deserialization=True)
+vectorstore = FAISS.load_local(str(INDEX_PATH), embeddings, allow_dangerous_deserialization=True)
 retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 2})
 
 # ---------- PROMPT ----------
-today = datetime.now().strftime("%Y-%m-%d")
-# ---------- PROMPT ----------
-prompt_body = """
-Kamu adalah asisten cerdas untuk situs web mkhuda.com — blog teknologi berisi artikel seputar AI, web development, dan tutorial modern.
-
-Gunakan konteks {context} yang berisi kumpulan artikel dari mkhuda.com. 
-Setiap artikel memiliki metadata berikut:
-- title → judul artikel
-- url → tautan artikel
-- date → tanggal publikasi (format YYYY-MM-DD HH:MM:SS)
-
-Tugasmu adalah membantu pengguna menemukan artikel yang sesuai.
-
----
-
-🧩 Jenis permintaan yang perlu kamu tangani:
-
-1️⃣ **Pencarian artikel berdasarkan topik atau kata kunci**
-   - Jika user menanyakan sesuatu seperti "artikel tentang htmx", "apa itu prompt engineering", atau "framework ringan", 
-     carikan artikel yang relevan.
-   - Jawaban ideal berisi penjelasan singkat, lalu daftar artikel relevan dengan format HTML:
-     <a href="{{url}}" target="_blank">{{title}}</a>
-
-2️⃣ **Pencarian artikel berdasarkan waktu**
-   - Jika user menyebut waktu, seperti “artikel bulan Juli 2024”, “artikel tahun ini”, “artikel terbaru”, atau “artikel terlama”:
-     - Gunakan metadata `date` untuk menentukan artikel yang dimaksud.
-     - Urutkan hasil:
-       • “terbaru” → tanggal paling baru di atas  
-       • “terlama” → tanggal paling lama di atas
-     - Jika user menyebut bulan/tahun → tampilkan artikel dengan tanggal yang cocok.
-
-3️⃣ **Ringkasan artikel**
-   - Jika user menyebut judul artikel (mis. “ringkas/rangkum/kesimpulan artikel tentang HTMX atau React”), 
-     anggap mereka mencari artikel itu atau topik yang serupa.
-   - Jika artikel dengan judul itu ada di konteks, tampilkan ringkasan berupa point penting dan kesimpulan
-   - Lalu, tampilkan juga artikel lain dengan tema yang mirip dan tautan langsungnya.
----
-💬 Gaya jawaban:
-- Bahasa Indonesia santai, informatif, dan sopan.
-- Jangan tautkan situs lain selain mkhuda.com.
-- Gunakan HTML aman (tanpa <script>).
-- Jika tidak ada hasil relevan, jawab sopan: “Sepertinya belum ada artikel tentang itu di mkhuda.com.”
-"""
-
-system_prompt = f"Tanggal hari ini: {today}\n\n{prompt_body}"
+# This part remains the same
+today = datetime.datetime.now().strftime("%Y-%m-%d")
+system_prompt = mkhuda_system_prompt(today)
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", system_prompt),
@@ -103,8 +127,8 @@ combine_docs_chain = create_stuff_documents_chain(
 )
 
 # ---------- HELPER ----------
+# This part remains the same
 def format_docs_with_meta(docs, max_chars=1000):
-    """Ringkas dokumen agar hemat token"""
     parts = []
     for d in docs:
         m = d.metadata
@@ -121,32 +145,42 @@ def format_docs_with_meta(docs, max_chars=1000):
 # ---------- ROUTES ----------
 @app.get("/")
 async def root():
-    return {"message": "🤖 mkhuda.com RAG API aktif", "status": "ok"}
+    next_run = scheduler.get_job('faiss_rebuild_job').next_run_time.strftime('%Y-%m-%d %H:%M:%S')
+    return {
+        "message": "🤖 mkhuda.com RAG API aktif",
+        "status": "ok",
+        "faiss_rebuild_scheduler": "active",
+        "next_scheduled_rebuild": next_run
+    }
 
 @app.post("/ask")
 async def ask(request: Request):
-    """Terima pertanyaan dari user dan kembalikan jawaban HTML-ready"""
+    # This part remains the same
     data = await request.json()
     message = data.get("message", "").strip()
     if not message:
         return {"reply": "Tolong masukkan pertanyaan."}
-
-    # 1️⃣ Intent detection (pre-reasoning)
+    
     intent = pre_reasoning(message)
     if intent["intent"] == "out_of_scope":
         return {"reply": intent.get("message", "Pertanyaan di luar cakupan mkhuda.com.")}
-
-    # 2️⃣ Retrieve artikel relevan
+    
     docs = retriever.invoke(message)
     context_text = format_docs_with_meta(docs)
     context_doc = [Document(page_content=context_text)]
-
-    # 3️⃣ Generate jawaban dari LLM
+    
     answer = combine_docs_chain.invoke({"context": context_doc, "input": message})
-    return {"reply": answer}
+    response_text = re.sub(r'\\n', '\n', answer).strip()
+    return {"reply": response_text}
+
+@app.post("/rebuild")
+def manual_rebuild():
+    """Endpoint to manually trigger a rebuild in the background."""
+    scheduled_rebuild_job()
+    return {"status": "ok", "message": "Manual FAISS index rebuild triggered in the background."}
+
 
 # ---------- RUN LOCAL ----------
-# Jalankan:  uvicorn rag_fast_api:app --reload --port 8000
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

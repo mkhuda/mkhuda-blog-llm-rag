@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  rag-api:
+    build:
+      context: .
+      secrets:
+        - dotenv
+    container_name: rag_api_service
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - web_webpublic
+    labels:
+      # --- IGNORE this: Traefik labels for routing and SSL ---
+      - "traefik.enable=true"
+      - "traefik.docker.network=web_webpublic"
+      - "traefik.http.routers.rag-api-secure.rule=Host(`${API_MKHUDA_COM_DOMAIN}`)"
+      - "traefik.http.routers.rag-api-secure.entrypoints=websecure"
+      - "traefik.http.routers.rag-api-secure.service=rag-api-service"
+      - "traefik.http.routers.rag-api-secure.tls.certresolver=mkhudacomresolver"
+      - "traefik.http.services.rag-api-service.loadbalancer.server.port=8000"
+
+networks:
+  web_webpublic:
+    external: true
+
+secrets:
+  dotenv:
+    file: ./.env
+

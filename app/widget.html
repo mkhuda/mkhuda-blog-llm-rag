@@ -3,471 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Widget LLM</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    <title>Chat Widget LLM (Enhanced)</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <style>
+        /* --- Base & Demo Styles (No changes) --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
         }
+        .demo-content { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+        .demo-content h1 { color: #1e73be; margin-bottom: 20px; }
+        .demo-content p { line-height: 1.6; color: #333; margin-bottom: 15px; }
 
-        .demo-content {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        }
-
-        .demo-content h1 {
-            color: #1e73be;
-            margin-bottom: 20px;
-        }
-
-        .demo-content p {
-            line-height: 1.6;
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        /* Chat Widget Styles */
-        .mkhudacomai-chat-widget {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            z-index: 9999;
-        }
-
-        /* Tooltip for First Visitor */
-        .mkhudacomai-greeting-tooltip {
-            position: absolute;
-            bottom: 80px; /* Posisi di atas tombol chat */
-            right: 0;
-            width: 250px;
-            background: white;
-            padding: 12px 16px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1); /* Soft, thin shadow */
-            font-size: 14px;
-            color: #333;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(10px);
-            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            z-index: 9998; /* Di bawah chat container */
-        }
-
-        .mkhudacomai-greeting-tooltip.mkhudacomai-show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0); /* Slide up */
-        }
+        /* --- Chat Widget Styles (Minor Additions) --- */
+        .mkhudacomai-chat-widget { position: fixed; bottom: 24px; right: 24px; z-index: 9999; }
+        .mkhudacomai-greeting-tooltip { position: absolute; bottom: 80px; right: 0; width: 250px; background: white; padding: 12px 16px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.1); font-size: 14px; color: #333; opacity: 0; visibility: hidden; transform: translateY(10px); transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 9998; }
+        .mkhudacomai-greeting-tooltip.mkhudacomai-show { opacity: 1; visibility: visible; transform: translateY(0); }
+        .mkhudacomai-greeting-tooltip p { margin: 0; line-height: 1.4; font-weight: 500; }
+        .mkhudacomai-chat-button { width: 60px; height: 60px; border-radius: 50%; background: #1e73be; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(30, 115, 190, 0.4); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .mkhudacomai-chat-button:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(30, 115, 190, 0.5); }
+        .mkhudacomai-chat-button svg { width: 28px; height: 28px; fill: white; }
+        .mkhudacomai-chat-button.mkhudacomai-active { background: #f44336; }
+        .mkhudacomai-chat-container { position: fixed; bottom: 100px; right: 24px; width: 380px; max-width: calc(100vw - 48px); height: 600px; max-height: calc(100vh - 140px); background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); display: none; flex-direction: column; overflow: hidden; animation: mkhudacomai-slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .mkhudacomai-chat-container.mkhudacomai-active { display: flex; }
+        @keyframes mkhudacomai-slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .mkhudacomai-chat-header { background: #1e73be; color: white; padding: 20px; display: flex; align-items: center; gap: 12px; position: relative; }
+        .mkhudacomai-chat-close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .mkhudacomai-chat-close:hover { background: rgba(255, 255, 255, 0.3); transform: scale(1.1); }
+        .mkhudacomai-chat-close svg { width: 18px; height: 18px; fill: white; }
+        .mkhudacomai-chat-header-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .mkhudacomai-chat-header-icon svg { width: 20px; height: 20px; fill: white; }
+        .mkhudacomai-chat-header-info h3 { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+        .mkhudacomai-chat-header-info p { font-size: 12px; opacity: 0.9; }
+        .mkhudacomai-chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; background: #f8f9fa; }
+        .mkhudacomai-chat-messages::-webkit-scrollbar { width: 6px; }
+        .mkhudacomai-chat-messages::-webkit-scrollbar-track { background: transparent; }
+        .mkhudacomai-chat-messages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        .mkhudacomai-message { display: flex; gap: 8px; animation: mkhudacomai-fadeIn 0.3s ease-out; }
+        @keyframes mkhudacomai-fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .mkhudacomai-message.mkhudacomai-user { flex-direction: row-reverse; }
+        .mkhudacomai-message-bubble { max-width: 75%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
+        .mkhudacomai-message.mkhudacomai-user .mkhudacomai-message-bubble { background: #1e73be; color: white; border-bottom-right-radius: 4px; }
+        .mkhudacomai-message.mkhudacomai-assistant .mkhudacomai-message-bubble { background: white; color: #333; border-bottom-left-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .mkhudacomai-message-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; align-self: flex-start; margin-top: 4px; }
+        .mkhudacomai-message.mkhudacomai-user .mkhudacomai-message-avatar { background: #e3f2fd; }
+        .mkhudacomai-message.mkhudacomai-assistant .mkhudacomai-message-avatar { background: #1e73be; }
+        .mkhudacomai-message-avatar svg { width: 18px; height: 18px; }
+        .mkhudacomai-message.mkhudacomai-user .mkhudacomai-message-avatar svg { fill: #1e73be; }
+        .mkhudacomai-message.mkhudacomai-assistant .mkhudacomai-message-avatar svg { fill: white; }
+        .mkhudacomai-typing-indicator { display: flex; gap: 4px; padding: 12px 16px; }
+        .mkhudacomai-typing-dot { width: 8px; height: 8px; border-radius: 50%; background: #9ca3af; animation: mkhudacomai-typing 1.4s infinite; }
+        .mkhudacomai-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .mkhudacomai-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes mkhudacomai-typing { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-10px); opacity: 1; } }
+        .mkhudacomai-quick-questions { padding: 0 20px 16px; display: flex; flex-direction: column; gap: 8px; background: #f8f9fa; }
+        .mkhudacomai-quick-question { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 16px; font-size: 13px; color: #1e73be; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; align-items: center; gap: 8px; }
+        .mkhudacomai-quick-question:hover { background: #f0f9ff; border-color: #1e73be; transform: translateX(4px); }
+        .mkhudacomai-quick-question svg { width: 16px; height: 16px; fill: #1e73be; flex-shrink: 0; }
+        .mkhudacomai-chat-input-container { padding: 16px; background: white; border-top: 1px solid #e5e7eb; }
+        .mkhudacomai-chat-input-wrapper { display: flex; gap: 8px; align-items: flex-end; }
+        .mkhudacomai-chat-input { flex: 1; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 24px; font-size: 14px; font-family: inherit; resize: none; max-height: 120px; outline: none; transition: border-color 0.2s; }
+        .mkhudacomai-chat-input:focus { border-color: #1e73be; }
+        .mkhudacomai-send-button { width: 40px; height: 40px; border-radius: 50%; background: #1e73be; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+        .mkhudacomai-send-button:hover:not(:disabled) { background: #155a8a; transform: scale(1.05); }
+        .mkhudacomai-send-button:disabled { background: #d1d5db; cursor: not-allowed; }
+        .mkhudacomai-send-button svg { width: 20px; height: 20px; fill: white; }
         
-        .mkhudacomai-greeting-tooltip p {
-            margin: 0;
-            line-height: 1.4;
-            font-weight: 500;
-        }
+        /* --- 3. ADDED: Styles for Markdown Content --- */
+        .mkhudacomai-message-bubble > *:first-child { margin-top: 0; }
+        .mkhudacomai-message-bubble > *:last-child { margin-bottom: 0; }
+        .mkhudacomai-message-bubble p { margin-bottom: 12px; }
+        .mkhudacomai-message-bubble a { color: #1e73be; text-decoration: none; }
+        .mkhudacomai-message-bubble a:hover { text-decoration: underline; }
+        .mkhudacomai-message-bubble ul, .mkhudacomai-message-bubble ol { padding-left: 20px; margin-bottom: 12px; }
+        .mkhudacomai-message-bubble li { margin-bottom: 4px; }
+        .mkhudacomai-message-bubble blockquote { border-left: 3px solid #d1d5db; padding-left: 12px; margin: 12px 0; color: #6b7280; }
+        .mkhudacomai-message-bubble code:not(pre > code) { background-color: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; font-family: 'Courier New', Courier, monospace; }
+        .mkhudacomai-message-bubble pre { position: relative; background-color: #282c34; border-radius: 8px; margin: 16px 0; font-size: 13px; }
+        .mkhudacomai-message-bubble pre code { display: block; padding: 16px; overflow-x: auto; color: #abb2bf; background: none; }
+        .mkhudacomai-copy-code-btn { position: absolute; top: 8px; right: 8px; background-color: #4b5563; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; opacity: 0; transition: opacity 0.2s; }
+        .mkhudacomai-message-bubble pre:hover .mkhudacomai-copy-code-btn { opacity: 1; }
+        .mkhudacomai-copy-code-btn:hover { background-color: #6b7280; }
 
-
-        .mkhudacomai-chat-button {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: #1e73be;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 20px rgba(30, 115, 190, 0.4);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .mkhudacomai-chat-button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 24px rgba(30, 115, 190, 0.5);
-        }
-
-        .mkhudacomai-chat-button svg {
-            width: 28px;
-            height: 28px;
-            fill: white;
-        }
-
-        .mkhudacomai-chat-button.mkhudacomai-active {
-            background: #f44336;
-        }
-
-        .mkhudacomai-chat-container {
-            position: fixed;
-            bottom: 100px;
-            right: 24px;
-            width: 380px;
-            max-width: calc(100vw - 48px);
-            height: 600px;
-            max-height: calc(100vh - 140px);
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-            animation: mkhudacomai-slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .mkhudacomai-chat-container.mkhudacomai-active {
-            display: flex;
-        }
-
-        @keyframes mkhudacomai-slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .mkhudacomai-chat-header {
-            background: #1e73be;
-            color: white;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            position: relative;
-        }
-
-        .mkhudacomai-chat-close {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .mkhudacomai-chat-close:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.1);
-        }
-
-        .mkhudacomai-chat-close svg {
-            width: 18px;
-            height: 18px;
-            fill: white;
-        }
-
-        .mkhudacomai-chat-header-icon {
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .mkhudacomai-chat-header-icon svg {
-            width: 20px;
-            height: 20px;
-            fill: white;
-        }
-
-        .mkhudacomai-chat-header-info h3 {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 2px;
-        }
-
-        .mkhudacomai-chat-header-info p {
-            font-size: 12px;
-            opacity: 0.9;
-        }
-
-        .mkhudacomai-chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            background: #f8f9fa;
-        }
-
-        .mkhudacomai-chat-messages::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .mkhudacomai-chat-messages::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .mkhudacomai-chat-messages::-webkit-scrollbar-thumb {
-            background: #d1d5db;
-            border-radius: 3px;
-        }
-
-        .mkhudacomai-message {
-            display: flex;
-            gap: 8px;
-            animation: mkhudacomai-fadeIn 0.3s ease-out;
-        }
-
-        @keyframes mkhudacomai-fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .mkhudacomai-message.mkhudacomai-user {
-            flex-direction: row-reverse;
-        }
-
-        .mkhudacomai-message-bubble {
-            max-width: 75%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 14px;
-            line-height: 1.5;
-            word-wrap: break-word;
-        }
-
-        .mkhudacomai-message.mkhudacomai-user .mkhudacomai-message-bubble {
-            background: #1e73be;
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .mkhudacomai-message.mkhudacomai-assistant .mkhudacomai-message-bubble {
-            background: white;
-            color: #333;
-            border-bottom-left-radius: 4px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-
-        .mkhudacomai-message-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .mkhudacomai-message.mkhudacomai-user .mkhudacomai-message-avatar {
-            background: #e3f2fd;
-        }
-
-        .mkhudacomai-message.mkhudacomai-assistant .mkhudacomai-message-avatar {
-            background: #1e73be;
-        }
-
-        .mkhudacomai-message-avatar svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        .mkhudacomai-message.mkhudacomai-user .mkhudacomai-message-avatar svg {
-            fill: #1e73be;
-        }
-
-        .mkhudacomai-message.mkhudacomai-assistant .mkhudacomai-message-avatar svg {
-            fill: white;
-        }
-
-        .mkhudacomai-typing-indicator {
-            display: flex;
-            gap: 4px;
-            padding: 12px 16px;
-        }
-
-        .mkhudacomai-typing-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #9ca3af;
-            animation: mkhudacomai-typing 1.4s infinite;
-        }
-
-        .mkhudacomai-typing-dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .mkhudacomai-typing-dot:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-
-        @keyframes mkhudacomai-typing {
-            0%, 60%, 100% {
-                transform: translateY(0);
-                opacity: 0.5;
-            }
-            30% {
-                transform: translateY(-10px);
-                opacity: 1;
-            }
-        }
-
-        .mkhudacomai-quick-questions {
-            padding: 0 20px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            background: #f8f9fa;
-        }
-
-        .mkhudacomai-quick-question {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 12px 16px;
-            font-size: 13px;
-            color: #1e73be;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: left;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .mkhudacomai-quick-question:hover {
-            background: #f0f9ff;
-            border-color: #1e73be;
-            transform: translateX(4px);
-        }
-
-        .mkhudacomai-quick-question svg {
-            width: 16px;
-            height: 16px;
-            fill: #1e73be;
-            flex-shrink: 0;
-        }
-
-        .mkhudacomai-chat-input-container {
-            padding: 16px;
-            background: white;
-            border-top: 1px solid #e5e7eb;
-        }
-
-        .mkhudacomai-chat-input-wrapper {
-            display: flex;
-            gap: 8px;
-            align-items: flex-end;
-        }
-
-        .mkhudacomai-chat-input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #e5e7eb;
-            border-radius: 24px;
-            font-size: 14px;
-            font-family: inherit;
-            resize: none;
-            max-height: 120px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .mkhudacomai-chat-input:focus {
-            border-color: #1e73be;
-        }
-
-        .mkhudacomai-send-button {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #1e73be;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            flex-shrink: 0;
-        }
-
-        .mkhudacomai-send-button:hover:not(:disabled) {
-            background: #155a8a;
-            transform: scale(1.05);
-        }
-
-        .mkhudacomai-send-button:disabled {
-            background: #d1d5db;
-            cursor: not-allowed;
-        }
-
-        .mkhudacomai-send-button svg {
-            width: 20px;
-            height: 20px;
-            fill: white;
-        }
-
-        /* Mobile Responsive */
         @media (max-width: 768px) {
-            .mkhudacomai-chat-container {
-                position: fixed;
-                bottom: 0;
-                right: 0;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                max-width: 100%;
-                max-height: 100%;
-                border-radius: 0;
-            }
-
-            .mkhudacomai-chat-button {
-                width: 56px;
-                height: 56px;
-            }
-
-            .mkhudacomai-chat-widget {
-                bottom: 20px;
-                right: 20px;
-            }
+            .mkhudacomai-chat-container { position: fixed; bottom: 0; right: 0; left: 0; top: 0; width: 100%; height: 100%; max-width: 100%; max-height: 100%; border-radius: 0; }
+            .mkhudacomai-chat-button { width: 56px; height: 56px; }
+            .mkhudacomai-chat-widget { bottom: 20px; right: 20px; }
         }
     </style>
 </head>
 <body>
     <div class="demo-content">
         <h1>Widget Chat LLM Demo</h1>
-        <p>Ini adalah halaman demo untuk menunjukkan widget chat LLM floating. Widget akan muncul di pojok kanan bawah layar.</p>
-        <p>Fitur yang tersedia:</p>
+        <p>This is a demo page for the floating LLM chat widget. The widget appears in the bottom-right corner of the screen.</p>
+        <p>Available features:</p>
         <ul style="margin-left: 20px; margin-bottom: 15px;">
-            <li>Floating button yang dapat diklik untuk membuka/menutup chat</li>
-            <li>Streaming response dari LLM (mock API)</li>
-            <li>Responsive design - full screen di mobile</li>
-            <li>Animasi smooth dan modern</li>
-            <li>Auto-scroll saat pesan baru masuk</li>
+            <li>Floating button to open/close chat</li>
+            <li>**NEW:** Rich markdown response rendering (lists, links, code blocks)</li>
+            <li>**NEW:** Syntax highlighting for code</li>
+            <li>**NEW:** "Copy code" button</li>
+            <li>Responsive design - full screen on mobile</li>
+            <li>Smooth and modern animations</li>
+            <li>Auto-scroll on new messages</li>
         </ul>
-        <p>Klik tombol chat di pojok kanan bawah untuk mencoba!</p>
+        <p>Click the chat button in the bottom-right corner to try it out!</p>
     </div>
 
     <div class="mkhudacomai-chat-widget">
@@ -475,341 +121,232 @@
             <p>👋 Hai! Aku AI dari mkhuda.com. Ada yang bisa kutelusuri untukmu?</p>
         </div>
         <button class="mkhudacomai-chat-button" id="mkhudacomaiChatToggle">
-            <svg id="mkhudacomaiChatIcon" viewBox="0 0 24 24">
-                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
-            </svg>
-            <svg id="mkhudacomaiCloseIcon" style="display: none;" viewBox="0 0 24 24">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-            </svg>
+            <svg id="mkhudacomaiChatIcon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+            <svg id="mkhudacomaiCloseIcon" style="display: none;" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
-
         <div class="mkhudacomai-chat-container" id="mkhudacomaiChatContainer">
             <div class="mkhudacomai-chat-header">
-                <button class="mkhudacomai-chat-close" id="mkhudacomaiChatCloseBtn">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                </button>
-                <div class="mkhudacomai-chat-header-icon">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
-                    </svg>
-                </div>
-                <div class="mkhudacomai-chat-header-info">
-                    <h3>AI Assistant</h3>
-                    <p>Siap membantu Anda</p>
-                </div>
+                <button class="mkhudacomai-chat-close" id="mkhudacomaiChatCloseBtn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+                <div class="mkhudacomai-chat-header-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg></div>
+                <div class="mkhudacomai-chat-header-info"><h3>AI Assistant</h3><p>Siap membantu Anda</p></div>
             </div>
-
             <div class="mkhudacomai-chat-messages" id="mkhudacomaiChatMessages">
                 <div class="mkhudacomai-message mkhudacomai-assistant">
-                    <div class="mkhudacomai-message-avatar">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-                        </svg>
-                    </div>
-                    <div class="mkhudacomai-message-bubble">
-                        Halo! Saya adalah AI Assistant. Ada yang bisa saya bantu?
-                    </div>
+                    <div class="mkhudacomai-message-avatar"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></div>
+                    <div class="mkhudacomai-message-bubble">Halo! Saya adalah AI Assistant. Ada yang bisa saya bantu?</div>
                 </div>
             </div>
-
             <div class="mkhudacomai-quick-questions" id="mkhudacomaiQuickQuestions">
-                <button class="mkhudacomai-quick-question" data-question="Bagaimana cara membuat responsive design yang baik?">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-                    </svg>
-                    Bagaimana cara membuat responsive design yang baik?
-                </button>
-                <button class="mkhudacomai-quick-question" data-question="Apa perbedaan antara CSS Grid dan Flexbox?">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-                    </svg>
-                    Apa perbedaan antara CSS Grid dan Flexbox?
-                </button>
-                <button class="mkhudacomai-quick-question" data-question="Bagaimana cara optimasi performa website?">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-                    </svg>
-                    Bagaimana cara optimasi performa website?
-                </button>
+                <button class="mkhudacomai-quick-question" data-question="Bagaimana cara membuat responsive design yang baik?"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>Bagaimana cara membuat responsive design yang baik?</button>
+                <button class="mkhudacomai-quick-question" data-question="Apa perbedaan antara CSS Grid dan Flexbox?"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>Apa perbedaan antara CSS Grid dan Flexbox?</button>
+                <button class="mkhudacomai-quick-question" data-question="Bagaimana cara optimasi performa website?"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>Bagaimana cara optimasi performa website?</button>
             </div>
-
             <div class="mkhudacomai-chat-input-container">
                 <div class="mkhudacomai-chat-input-wrapper">
-                    <textarea 
-                        class="mkhudacomai-chat-input" 
-                        id="mkhudacomaiChatInput" 
-                        placeholder="Ketik pesan Anda..."
-                        rows="1"
-                    ></textarea>
-                    <button class="mkhudacomai-send-button" id="mkhudacomaiSendButton">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                        </svg>
-                    </button>
+                    <textarea class="mkhudacomai-chat-input" id="mkhudacomaiChatInput" placeholder="Ketik pesan Anda..." rows="1"></textarea>
+                    <button class="mkhudacomai-send-button" id="mkhudacomaiSendButton"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
                 </div>
             </div>
         </div>
     </div>
-
+    
     <script>
-        const API_URL = "http://localhost:8000/ask"; 
-        const chatToggle = document.getElementById('mkhudacomaiChatToggle');
-        const chatContainer = document.getElementById('mkhudacomaiChatContainer');
-        const chatCloseBtn = document.getElementById('mkhudacomaiChatCloseBtn');
-        const chatIcon = document.getElementById('mkhudacomaiChatIcon');
-        const closeIcon = document.getElementById('mkhudacomaiCloseIcon');
-        const chatMessages = document.getElementById('mkhudacomaiChatMessages');
-        const chatInput = document.getElementById('mkhudacomaiChatInput');
-        const sendButton = document.getElementById('mkhudacomaiSendButton');
-        const quickQuestions = document.getElementById('mkhudacomaiQuickQuestions');
-        // Elemen baru untuk Tooltip
-        const greetingTooltip = document.getElementById('mkhudacomaiGreetingTooltip');
+        document.addEventListener('DOMContentLoaded', () => {
+            const API_URL = "http://localhost:8000/ask"; 
+            const chatToggle = document.getElementById('mkhudacomaiChatToggle');
+            const chatContainer = document.getElementById('mkhudacomaiChatContainer');
+            const chatCloseBtn = document.getElementById('mkhudacomaiChatCloseBtn');
+            const chatIcon = document.getElementById('mkhudacomaiChatIcon');
+            const closeIcon = document.getElementById('mkhudacomaiCloseIcon');
+            const chatMessages = document.getElementById('mkhudacomaiChatMessages');
+            const chatInput = document.getElementById('mkhudacomaiChatInput');
+            const sendButton = document.getElementById('mkhudacomaiSendButton');
+            const quickQuestions = document.getElementById('mkhudacomaiQuickQuestions');
+            const greetingTooltip = document.getElementById('mkhudacomaiGreetingTooltip');
 
-        const localStorageKey = 'mkhudacomai_first_visit';
-        let isOpen = false;
-        let hasInteracted = false;
+            const localStorageKey = 'mkhudacomai_first_visit';
+            let isOpen = false;
+            let hasInteracted = false;
 
-
-        // --- FUNGSI TOOLTIP DAN LOCALSTORAGE ---
-        function showTooltip() {
-            // Cek LocalStorage
-            if (localStorage.getItem(localStorageKey) === 'true') {
-                return; // Sudah pernah dilihat, jangan tampilkan
+            function showTooltip() {
+                if (localStorage.getItem(localStorageKey) === 'true') return;
+                setTimeout(() => { greetingTooltip.classList.add('mkhudacomai-show'); }, 1000);
+                setTimeout(hideTooltip, 6000);
             }
 
-            // Tampilkan Tooltip dengan delay
-            setTimeout(() => {
-                greetingTooltip.classList.add('mkhudacomai-show');
-            }, 1000); // Tunda 1 detik
-
-            // Sembunyikan Tooltip dan atur LocalStorage
-            setTimeout(() => {
-                hideTooltip();
-            }, 6000); // Tampilkan selama 5 detik
-        }
-
-        function hideTooltip() {
-            greetingTooltip.classList.remove('mkhudacomai-show');
-            
-            // Set LocalStorage setelah tooltip hilang
-            setTimeout(() => {
-                localStorage.setItem(localStorageKey, 'true');
-            }, 400); // Tunggu animasi fade selesai
-
-        }
-
-
-        // Toggle chat
-        function toggleChat() {
-            isOpen = !isOpen;
-            chatContainer.classList.toggle('mkhudacomai-active');
-            chatToggle.classList.toggle('mkhudacomai-active');
-            
-            if (isOpen) {
-                // Sembunyikan tooltip segera saat chat dibuka
-                hideTooltip(); 
-                chatIcon.style.display = 'none';
-                closeIcon.style.display = 'block';
-                chatInput.focus();
-            } else {
-                chatIcon.style.display = 'block';
-                closeIcon.style.display = 'none';
+            function hideTooltip() {
+                greetingTooltip.classList.remove('mkhudacomai-show');
+                setTimeout(() => { localStorage.setItem(localStorageKey, 'true'); }, 400);
             }
-        }
 
-        chatToggle.addEventListener('click', toggleChat);
-        chatCloseBtn.addEventListener('click', toggleChat);
-
-        // Quick questions click handler
-        quickQuestions.addEventListener('click', (e) => {
-            const btn = e.target.closest('.mkhudacomai-quick-question');
-            if (btn) {
-                const question = btn.getAttribute('data-question');
-                chatInput.value = question;
-                sendMessage();
+            function toggleChat() {
+                isOpen = !isOpen;
+                chatContainer.classList.toggle('mkhudacomai-active');
+                chatToggle.classList.toggle('mkhudacomai-active');
+                chatIcon.style.display = isOpen ? 'none' : 'block';
+                closeIcon.style.display = isOpen ? 'block' : 'none';
+                if (isOpen) {
+                    hideTooltip();
+                    chatInput.focus();
+                }
             }
-        });
 
-        // Hide quick questions after first interaction
-        function hideQuickQuestions() {
-            if (!hasInteracted) {
-                quickQuestions.style.display = 'none';
-                hasInteracted = true;
+            chatToggle.addEventListener('click', toggleChat);
+            chatCloseBtn.addEventListener('click', toggleChat);
+
+            quickQuestions.addEventListener('click', (e) => {
+                const btn = e.target.closest('.mkhudacomai-quick-question');
+                if (btn) {
+                    chatInput.value = btn.getAttribute('data-question');
+                    sendMessage();
+                }
+            });
+
+            function hideQuickQuestions() {
+                if (!hasInteracted) {
+                    quickQuestions.style.display = 'none';
+                    hasInteracted = true;
+                }
             }
-        }
 
-        // Auto-resize textarea
-        chatInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-        });
+            chatInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
 
-        // Send message on Enter (Shift+Enter for new line)
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            sendButton.addEventListener('click', sendMessage);
+
+            function enhanceCodeBlocks(bubbleDiv) {
+                const codeBlocks = bubbleDiv.querySelectorAll('pre code');
+                codeBlocks.forEach((codeBlock) => {
+                    // Apply syntax highlighting
+                    hljs.highlightElement(codeBlock);
+
+                    // Create and add copy button
+                    const preElement = codeBlock.parentElement;
+                    const copyButton = document.createElement('button');
+                    copyButton.className = 'mkhudacomai-copy-code-btn';
+                    copyButton.textContent = 'Copy';
+                    preElement.appendChild(copyButton);
+
+                    copyButton.addEventListener('click', () => {
+                        navigator.clipboard.writeText(codeBlock.innerText).then(() => {
+                            copyButton.textContent = 'Copied!';
+                            setTimeout(() => {
+                                copyButton.textContent = 'Copy';
+                            }, 2000);
+                        });
+                    });
+                });
             }
-        });
 
-        sendButton.addEventListener('click', sendMessage);
-
-        function addMessage(content, isUser = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `mkhudacomai-message ${isUser ? 'mkhudacomai-user' : 'mkhudacomai-assistant'}`;
-            
-            const avatarDiv = document.createElement('div');
-            avatarDiv.className = 'mkhudacomai-message-avatar';
-            avatarDiv.innerHTML = isUser 
-                ? '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'
-                : '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>';
-            
-            const bubbleDiv = document.createElement('div');
-            bubbleDiv.className = 'mkhudacomai-message-bubble';
-            bubbleDiv.textContent = content;
-            
-            messageDiv.appendChild(avatarDiv);
-            messageDiv.appendChild(bubbleDiv);
-            chatMessages.appendChild(messageDiv);
-            
-            scrollToBottom();
-            return bubbleDiv;
-        }
-
-        function addTypingIndicator() {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'mkhudacomai-message mkhudacomai-assistant';
-            messageDiv.id = 'mkhudacomaiTypingIndicator';
-            
-            const avatarDiv = document.createElement('div');
-            avatarDiv.className = 'mkhudacomai-message-avatar';
-            avatarDiv.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>';
-            
-            const bubbleDiv = document.createElement('div');
-            bubbleDiv.className = 'mkhudacomai-message-bubble';
-            bubbleDiv.innerHTML = '<div class="mkhudacomai-typing-indicator"><div class="mkhudacomai-typing-dot"></div><div class="mkhudacomai-typing-dot"></div><div class="mkhudacomai-typing-dot"></div></div>';
-            
-            messageDiv.appendChild(avatarDiv);
-            messageDiv.appendChild(bubbleDiv);
-            chatMessages.appendChild(messageDiv);
-            
-            scrollToBottom();
-        }
-
-        function removeTypingIndicator() {
-            const indicator = document.getElementById('mkhudacomaiTypingIndicator');
-            if (indicator) {
-                indicator.remove();
-            }
-        }
-
-        function scrollToBottom() {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        async function sendMessage() {
-    const message = chatInput.value.trim();
-    if (!message) return;
-
-    hideQuickQuestions();
-    addMessage(message, true);
-    chatInput.value = '';
-    chatInput.style.height = 'auto';
-    sendButton.disabled = true;
-    chatInput.disabled = true;
-
-    addTypingIndicator();
-
-    try {
-        const response = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message })
-        });
-
-        removeTypingIndicator();
-
-        if (!response.ok) {
-            addMessage("⚠️ Gagal menghubungi server.", false);
-        } else {
-            const data = await response.json();
-
-            // 🧠 Render HTML langsung (bisa mengandung <a href>)
-            const msgDiv = document.createElement("div");
-            msgDiv.className = "mkhudacomai-message mkhudacomai-assistant";
-            msgDiv.innerHTML = `
-                <div class="mkhudacomai-message-avatar">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
-                                 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41
-                                 0-8-3.59-8-8s3.59-8 8-8
-                                 8 3.59 8 8-3.59 8-8 8z"/>
-                    </svg>
-                </div>
-                <div class="mkhudacomai-message-bubble">${data.reply}</div>
-            `;
-            chatMessages.appendChild(msgDiv);
-            scrollToBottom();
-        }
-    } catch (err) {
-        console.error("Error:", err);
-        removeTypingIndicator();
-        addMessage("❌ Terjadi kesalahan koneksi. Coba lagi nanti.", false);
-    } finally {
-        sendButton.disabled = false;
-        chatInput.disabled = false;
-        chatInput.focus();
-    }
-}
-
-        async function streamResponse(userMessage) {
-            // Remove typing indicator
-            removeTypingIndicator();
-
-            // Mock responses
-            const responses = [
-                "Terima kasih atas pertanyaan Anda. Saya akan membantu menjawabnya dengan detail.",
-                "Berdasarkan informasi yang Anda berikan, saya dapat memberikan beberapa insight yang berguna.",
-                "Ini adalah jawaban yang komprehensif untuk pertanyaan Anda. Semoga membantu!",
-                "Saya memahami kebutuhan Anda. Berikut adalah penjelasan lengkapnya.",
-                "Pertanyaan yang menarik! Mari saya jelaskan secara mendetail."
-            ];
-
-            const response = responses[Math.floor(Math.random() * responses.length)];
-            
-            // Create message bubble for streaming
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'mkhudacomai-message mkhudacomai-assistant';
-            
-            const avatarDiv = document.createElement('div');
-            avatarDiv.className = 'mkhudacomai-message-avatar';
-            avatarDiv.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>';
-            
-            const bubbleDiv = document.createElement('div');
-            bubbleDiv.className = 'mkhudacomai-message-bubble';
-            bubbleDiv.textContent = '';
-            
-            messageDiv.appendChild(avatarDiv);
-            messageDiv.appendChild(bubbleDiv);
-            chatMessages.appendChild(messageDiv);
-
-            // Simulate streaming with character-by-character reveal
-            let currentText = '';
-            for (let i = 0; i < response.length; i++) {
-                currentText += response[i];
-                bubbleDiv.textContent = currentText;
-                scrollToBottom();
+            function addMessage(content, isUser = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `mkhudacomai-message ${isUser ? 'mkhudacomai-user' : 'mkhudacomai-assistant'}`;
                 
-                // Random delay between 20-50ms for natural feel
-                await new Promise(resolve => setTimeout(resolve, Math.random() * 30 + 20));
-            }
-        }
+                const avatarHTML = isUser 
+                    ? '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'
+                    : '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>';
 
-        // Initialize
-        chatInput.focus();
-        showTooltip(); // Panggil fungsi ini saat halaman dimuat
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.className = 'mkhudacomai-message-bubble';
+                
+                if (isUser) {
+                    bubbleDiv.textContent = content;
+                } else {
+                    // Use marked.js to parse markdown
+                    bubbleDiv.innerHTML = marked.parse(content);
+                    // Enhance code blocks after parsing
+                    enhanceCodeBlocks(bubbleDiv);
+                }
+                
+                messageDiv.innerHTML = `<div class="mkhudacomai-message-avatar">${avatarHTML}</div>`;
+                messageDiv.appendChild(bubbleDiv);
+                chatMessages.appendChild(messageDiv);
+                
+                scrollToBottom();
+                return bubbleDiv;
+            }
+
+            function addTypingIndicator() {
+                const indicatorId = 'mkhudacomaiTypingIndicator';
+                if (document.getElementById(indicatorId)) return;
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'mkhudacomai-message mkhudacomai-assistant';
+                messageDiv.id = indicatorId;
+                messageDiv.innerHTML = `
+                    <div class="mkhudacomai-message-avatar">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+                    </div>
+                    <div class="mkhudacomai-message-bubble">
+                        <div class="mkhudacomai-typing-indicator">
+                            <div class="mkhudacomai-typing-dot"></div>
+                            <div class="mkhudacomai-typing-dot"></div>
+                            <div class="mkhudacomai-typing-dot"></div>
+                        </div>
+                    </div>`;
+                chatMessages.appendChild(messageDiv);
+                scrollToBottom();
+            }
+
+            function removeTypingIndicator() {
+                const indicator = document.getElementById('mkhudacomaiTypingIndicator');
+                if (indicator) indicator.remove();
+            }
+
+            function scrollToBottom() {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            async function sendMessage() {
+                const message = chatInput.value.trim();
+                if (!message) return;
+
+                hideQuickQuestions();
+                addMessage(message, true);
+                chatInput.value = '';
+                chatInput.style.height = 'auto';
+                sendButton.disabled = true;
+                chatInput.disabled = true;
+                addTypingIndicator();
+
+                sendMessageWithAPI(message);
+            }
+
+            async function sendMessageWithAPI(message) {
+                // ... (same setup as original sendMessage)
+                try {
+                    const response = await fetch(API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ message })
+                    });
+                    removeTypingIndicator();
+                    
+                        const data = await response.json();
+                        addMessage(data.reply); // Assumes reply contains markdown
+                    
+                } catch (err) {
+                    console.error("Error:", err);
+                    removeTypingIndicator();
+                    addMessage("❌ Terjadi kesalahan koneksi. Coba lagi nanti.");
+                } finally {
+                    sendButton.disabled = false;
+                    chatInput.disabled = false;
+                    chatInput.focus();
+                }
+            }
+
+            showTooltip();
+        });
     </script>
 </body>
 </html>

@@ -5,7 +5,7 @@ Tanpa filter where, tanpa date range.
 Fokus pada semantic similarity dan relevansi pertanyaan.
 """
 
-from pydantic_langchain_fix import patch_langchain_models
+from utils.pydantic_langchain_fix import patch_langchain_models
 patch_langchain_models(verbose=False)
 
 from dotenv import load_dotenv
@@ -19,7 +19,7 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.docstore.document import Document
 from rag_pre_reasoning2 import pre_reasoning
-from rag_prompts import mkhuda_system_prompt
+from utils.rag_prompts import mkhuda_system_prompt
 
 
 # ---------- KONFIGURASI ----------

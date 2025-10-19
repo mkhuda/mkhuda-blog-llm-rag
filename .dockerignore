@@ -1,0 +1,23 @@
+# Docker ignore file
+
+# Ignore git and vscode directories
+.git/
+.vscode/
+
+# Ignore Python cache and virtual environments
+__pycache__/
+*.pyc
+.venv/
+
+# Ignore environment files - these are passed in as secrets or env vars
+.env
+.env-sample
+
+# Per your request, ignore these specific files and directories
+docs_chroma.json
+docs.json
+mkhuda_chroma_backup.json
+mkhuda_chroma_meta.json
+mkhuda_faiss_backup.json
+mkhuda_chroma/
+mkhuda_faiss_index/
