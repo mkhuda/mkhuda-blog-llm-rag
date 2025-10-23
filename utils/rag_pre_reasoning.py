@@ -55,12 +55,14 @@ def pre_reasoning(user_query: str) -> dict:
         temperature=0.2,
     )
 
+    usage_metadata = completion.usage
+
     try:
         result = json.loads(completion.choices[0].message.content)
     except Exception:
         result = {"intent": "rag_search"}  # fallback aman
 
-    return result
+    return result, usage_metadata
 
 
 # --- Quick test (jalankan file langsung) ---

@@ -33,7 +33,6 @@ RUN --mount=type=secret,id=dotenv,target=.env \
     python builder/rag_faiss_builder.py && \
     echo "--- FAISS index successfully built ---"
 
-
 # === Runtime Stage ===
 # This is the final, lean image that will be deployed.
 FROM python:3.12-slim
@@ -64,4 +63,4 @@ EXPOSE 8000
 # ---> THE CORRECTED AND FINAL COMMAND <---
 # Use 'python -m' to reliably run uvicorn from within the venv.
 # Point it to our new, all-in-one FastAPI application.
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.rag_fastapi:app", "--workers", "4", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.rag_fastapi:app", "--workers", "2", "--bind", "0.0.0.0:8000", "--timeout", "60", "--keep-alive", "5", "--log-level", "info"]
