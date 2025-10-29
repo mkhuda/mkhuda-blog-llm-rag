@@ -16,10 +16,19 @@ This repository powers Retrieval-Augmented Generation (RAG) features for mkhuda.
 - [uv](https://docs.astral.sh/uv/) package manager (`pip install uv` or follow Astral’s instructions)
 - Had access to your WordPress MySQL database
 - OpenAI API key with access to `text-embedding-3-small` and `gpt-4o-mini`
+- pyenv for easy Python versioning
 
 ## Environment Setup
 
-1. Clone the repository and install dependencies with `uv`:
+1. Instll `pyenv` (Recommended)
+
+  ```bash
+  brew install pyenv
+  pyenv install 3.12.7
+  pyenv local 3.12.7
+  ```
+
+2. Clone the repository and install dependencies with `uv`:
 
    ```bash
    git clone https://github.com/mkhuda/mkhuda-blog-llm-rag.git
@@ -27,7 +36,7 @@ This repository powers Retrieval-Augmented Generation (RAG) features for mkhuda.
    uv sync
    ```
 
-2. Create a `.env` file in the project root (copy `.env.example` if you have one) and fill in your credentials:
+3. Create a `.env` file in the project root (copy `.env.example` if you have one) and fill in your credentials:
 
    ```ini
    OPENAI_API_KEY=sk-...
@@ -40,7 +49,7 @@ This repository powers Retrieval-Augmented Generation (RAG) features for mkhuda.
 
    The scripts load these variables via `python-dotenv`.
 
-3. (Optional) if you need to install extra tools into the virtual environment later, use `uv pip install <package>`.
+4. (Optional) if you need to install extra tools into the virtual environment later, use `uv pip install <package>`.
 
 ## Building Indexes
 
