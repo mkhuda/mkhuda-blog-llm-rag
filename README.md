@@ -54,7 +54,7 @@ This repository powers Retrieval-Augmented Generation (RAG) features for mkhuda.
 ## Docker Build and docker-compose
 1. To use this project inside docker, first you need to build:
    ```bash
-   docker build --secret id=dotenv,src=.env -t mkhuda-rag-api-image:latest . 
+   DOCKER_BUILDKIT=1 docker build --secret id=dotenv,src=.env -t mkhuda-rag-api-image:latest .
    
    docker-compose up -d
    ```

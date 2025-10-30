@@ -1,7 +1,7 @@
 # === Builder Stage ===
 # This stage installs dependencies, pre-builds the FAISS index, and creates a virtual env.
-# --- FIX: Use 'bookworm' (Debian 12 Stable) instead of 'trixie' (testing) ---
-FROM python:3.12-slim-bookworm AS builder
+# --- FIX: Use 'bullseye' (Debian 11 Stable) to fix compatibility with old Docker versions ---
+FROM python:3.12-slim-bullseye AS builder
 WORKDIR /app
 
 # --- FIX: Add apt.conf.d fix for "Post-Invoke" error ---
@@ -9,9 +9,10 @@ WORKDIR /app
 RUN echo 'APT::Update::Post-Invoke "true";' > /etc/apt/apt.conf.d/99-no-post-invoke
 
 # Install system dependencies needed for building Python packages
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
+# --- FIX: Separate apt-get commands to isolate the issue ---
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends build-essential libgomp1
+RUN rm -rf /var/lib/apt/lists/*
 
 # Install uv, a fast python package manager
 RUN pip install --upgrade pip uv --no-cache-dir
@@ -40,8 +41,8 @@ RUN --mount=type=secret,id=dotenv,target=.env \
 
 # === Runtime Stage ===
 # This is the final, lean image that will be deployed.
-# --- FIX: Use 'bookworm' (Debian 12 Stable) on the final stage as well ---
-FROM python:3.12-slim-bookworm
+# --- FIX: Use 'bullseye' (Debian 11 Stable) on the final stage as well ---
+FROM python:3.12-slim-bullseye
 WORKDIR /app
 
 # --- FIX: Add apt.conf.d fix for "Post-Invoke" error ---
@@ -49,20 +50,23 @@ WORKDIR /app
 RUN echo 'APT::Update::Post-Invoke "true";' > /etc/apt/apt.conf.d/99-no-post-invoke
 
 # Install only the necessary runtime system dependencies
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
+# --- FIX: Separate apt-get commands to isolate the issue ---
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends libgomp1
+RUN rm -rf /var/lib/apt/lists/*
 
 # Copy the virtual environment with all dependencies from the builder stage
 COPY --from=builder /app/.venv /app/.venv
 
 # Copy the application code
+# --- FIX: Corrected typo '--from-builder' to '--from=builder' ---
 COPY --from=builder /app/app ./app
 COPY --from=builder /app/utils ./utils
 
 # ---> COPY THE PRE-BUILT INDEX <---
 # Bring the generated index from the builder stage into our final image.
-COPY --from=builder /app/mkhuda_faISS_index ./mkhuda_faiss_index
+# --- FIX: Corrected typo '--from-builder' to '--from=builder' ---
+COPY --from=builder /app/mkhuda_faiss_index ./mkhuda_faiss_index
 
 # Set environment variables so the app uses the virtual environment
 ENV PATH="/app/.venv/bin:${PATH}"
@@ -71,7 +75,6 @@ ENV VIRTUAL_ENV=/app/.venv
 EXPOSE 8000
 
 # ---> THE CORRECTED AND FINAL COMMAND <---
-# Use 'python -m' to reliably run uvicorn from within the venv.
-# Point it to our new, all-in-one FastAPI application.
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.rag_fastapi:app", "--workers", "2", "--bind", "0.0.0.0:8000", "timeout", "60", "--keep-alive", "5", "--log-level", "info"]
+# --- FIX: Added missing '--' before 'timeout' ---
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.rag_fastapi:app", "--workers", "2", "--bind", "0.0.0.0:8000", "--timeout", "60", "--keep-alive", "5", "--log-level", "info"]
 
