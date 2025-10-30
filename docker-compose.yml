@@ -12,8 +12,8 @@ services:
       - .env
     ports:
       - "8000:8000"
-    # networks:
-    #   - web_webpublic
+    networks:
+      - web_webpublic
     labels:
       # --- IGNORE this: Traefik labels for routing and SSL ---
       - "traefik.enable=true"
@@ -24,9 +24,9 @@ services:
       - "traefik.http.routers.rag-api-secure.tls.certresolver=mkhudacomresolver"
       - "traefik.http.services.rag-api-service.loadbalancer.server.port=8000"
 
-# networks:
-#   web_webpublic:
-#     external: true
+networks:
+  web_webpublic:
+    external: true
 
 secrets:
   dotenv:
