@@ -4,6 +4,10 @@
 FROM python:3.12-slim-bookworm AS builder
 WORKDIR /app
 
+# --- FIX: Add apt.conf.d fix for "Post-Invoke" error ---
+# This disables the problematic script that fails on some Docker versions.
+RUN echo 'APT::Update::Post-Invoke "true";' > /etc/apt/apt.conf.d/99-no-post-invoke
+
 # Install system dependencies needed for building Python packages
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential libgomp1 \
@@ -40,6 +44,10 @@ RUN --mount=type=secret,id=dotenv,target=.env \
 FROM python:3.12-slim-bookworm
 WORKDIR /app
 
+# --- FIX: Add apt.conf.d fix for "Post-Invoke" error ---
+# This disables the problematic script that fails on some Docker versions.
+RUN echo 'APT::Update::Post-Invoke "true";' > /etc/apt/apt.conf.d/99-no-post-invoke
+
 # Install only the necessary runtime system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 \
@@ -54,7 +62,7 @@ COPY --from=builder /app/utils ./utils
 
 # ---> COPY THE PRE-BUILT INDEX <---
 # Bring the generated index from the builder stage into our final image.
-COPY --from=builder /app/mkhuda_faiss_index ./mkhuda_faiss_index
+COPY --from=builder /app/mkhuda_faISS_index ./mkhuda_faiss_index
 
 # Set environment variables so the app uses the virtual environment
 ENV PATH="/app/.venv/bin:${PATH}"
@@ -66,3 +74,4 @@ EXPOSE 8000
 # Use 'python -m' to reliably run uvicorn from within the venv.
 # Point it to our new, all-in-one FastAPI application.
 CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.rag_fastapi:app", "--workers", "2", "--bind", "0.0.0.0:8000", "timeout", "60", "--keep-alive", "5", "--log-level", "info"]
+
