@@ -34,6 +34,7 @@ COPY utils ./utils
 # ---> PRE-BUILD THE FAISS INDEX <---
 # This is a key optimization. The index is built once and baked into the image.
 # We mount the .env file as a secret to provide the necessary API key.
+# --- FIX: Point to the correct builder script 'rag_faiss_builder.py' ---
 RUN --mount=type=secret,id=dotenv,target=.env \
     echo "--- Building FAISS index during Docker image creation ---" && \
     python builder/rag_faiss_builder.py && \
@@ -65,16 +66,26 @@ COPY --from=builder /app/utils ./utils
 
 # ---> COPY THE PRE-BUILT INDEX <---
 # Bring the generated index from the builder stage into our final image.
-# --- FIX: Corrected typo '--from-builder' to '--from=builder' ---
+# --- FIX: Corrected typo 'faISS_index' to 'faiss_index' ---
 COPY --from=builder /app/mkhuda_faiss_index ./mkhuda_faiss_index
 
 # Set environment variables so the app uses the virtual environment
 ENV PATH="/app/.venv/bin:${PATH}"
 ENV VIRTUAL_ENV=/app/.venv
 
+# --- FIX: Force Python to run unbuffered so logs appear immediately ---
+ENV PYTHONUNBUFFERED=1
+
 EXPOSE 8000
 
 # ---> THE CORRECTED AND FINAL COMMAND <---
-# --- FIX: Added missing '--' before 'timeout' ---
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.rag_fastapi:app", "--workers", "2", "--bind", "0.0.0.0:8000", "--timeout", "60", "--keep-alive", "5", "--log-level", "info"]
+# --- FIX: Added --access-logfile and --error-logfile flags to stream logs ---
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.rag_fastapi:app", \
+    "--workers", "2", \
+    "--bind", "0.0.0.0:8000", \
+    "--timeout", "60", \
+    "--keep-alive", "5", \
+    "--log-level", "info", \
+    "--access-logfile", "-", \
+    "--error-logfile", "-"]
 
