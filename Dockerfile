@@ -1,6 +1,7 @@
 # === Builder Stage ===
 # This stage installs dependencies, pre-builds the FAISS index, and creates a virtual env.
-FROM python:3.12-slim AS builder
+# --- FIX: Use 'bookworm' (Debian 12 Stable) instead of 'trixie' (testing) ---
+FROM python:3.12-slim-bookworm AS builder
 WORKDIR /app
 
 # Install system dependencies needed for building Python packages
@@ -35,7 +36,8 @@ RUN --mount=type=secret,id=dotenv,target=.env \
 
 # === Runtime Stage ===
 # This is the final, lean image that will be deployed.
-FROM python:3.12-slim
+# --- FIX: Use 'bookworm' (Debian 12 Stable) on the final stage as well ---
+FROM python:3.12-slim-bookworm
 WORKDIR /app
 
 # Install only the necessary runtime system dependencies
@@ -63,4 +65,4 @@ EXPOSE 8000
 # ---> THE CORRECTED AND FINAL COMMAND <---
 # Use 'python -m' to reliably run uvicorn from within the venv.
 # Point it to our new, all-in-one FastAPI application.
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.rag_fastapi:app", "--workers", "2", "--bind", "0.0.0.0:8000", "--timeout", "60", "--keep-alive", "5", "--log-level", "info"]
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.rag_fastapi:app", "--workers", "2", "--bind", "0.0.0.0:8000", "timeout", "60", "--keep-alive", "5", "--log-level", "info"]
